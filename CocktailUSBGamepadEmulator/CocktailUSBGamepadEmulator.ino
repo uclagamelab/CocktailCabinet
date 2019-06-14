@@ -146,6 +146,6 @@ void loop() {
     lastQuitButtonChordState = currentQuitButtonChordState;
   }
     //------
-
+  Joystick.setZAxis(-127);
   delay(10);
 }
