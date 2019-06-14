@@ -86,15 +86,9 @@ void loop() {
     int currentButtonState = !digitalRead(pin);
     if (currentButtonState != lastButtonState[i])
     {
-      //Joystick.setButton(joystickButton, currentButtonState);
-      if (currentButtonState)
-      {    
-        XInput.press(joystickButton);
-      }
-      else
-      {
-         XInput.release(joystickButton);
-      }
+      //Joystick.setButton(joystickButton, currentButtonState);    
+        XInput.setButton(joystickButton,currentButtonState);
+
       lastButtonState[i] = currentButtonState;
     }
   }
@@ -157,15 +151,7 @@ int finalY = JOYMID;
 
     if (currentQuitButtonChordState != lastQuitButtonChordState)
     {
-      if (currentQuitButtonChordState)
-      {
-        XInput.press(QUIT_JOYSTICK_BUTTON); 
-      }
-      else
-      {
-         XInput.release(QUIT_JOYSTICK_BUTTON); 
-      }
-      //Joystick.setButton(QUIT_JOYSTICK_BUTTON, currentQuitButtonChordState);
+        XInput.setButton(QUIT_JOYSTICK_BUTTON, currentQuitButtonChordState); 
     }
 
     lastQuitButtonChordState = currentQuitButtonChordState;
