@@ -147,5 +147,11 @@ void loop() {
   }
     //------
   Joystick.setZAxis(-127);
+  Joystick.setXAxisRotation(0);
+  Joystick.setYAxisRotation(0);
+  Joystick.setThrottle(0);
+  Joystick.setRudder(0);
+  Joystick.setHatSwitch(0,-1);
+  Joystick.setHatSwitch(1,-1);
   delay(10);
 }
