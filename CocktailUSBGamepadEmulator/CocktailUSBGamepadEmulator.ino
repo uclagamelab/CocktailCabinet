@@ -13,9 +13,9 @@
 
 #include <Joystick.h>
 
-Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_JOYSTICK,
+Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID+1,JOYSTICK_TYPE_GAMEPAD,
   8, 0,                  // Button Count, Hat Switch Count
-  true, true, true,     // X and Y, but no Z Axis
+  true, true, false,     // X and Y, but no Z Axis
   false, false, false,   // No Rx, Ry, or Rz
   false, false,          // No rudder or throttle
   false, false, false);  // No accelerator, brake, or steering
@@ -160,12 +160,13 @@ void loop() {
     lastQuitButtonChordState = currentQuitButtonChordState;
   }
   //------
-
+ ZeroUnusedAxes();
   delay(10);
 }
 
 void ZeroUnusedAxes()
 {
-  //Joystick.setHatSwitch(0, -1);
-  //Joystick.setHatSwitch(1, -1);
+  //fishy looking, but without this line, Unity games with default input 
+  //get constant spurious input
+  Joystick.setZAxis(-127);
 }
