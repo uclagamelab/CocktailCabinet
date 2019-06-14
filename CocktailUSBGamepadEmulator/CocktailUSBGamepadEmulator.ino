@@ -4,54 +4,33 @@
 //
 // *** Currently setup assuming a digital (not-analog) joystick
 //
-// *** This sketch file is for use with Arduino Leonardo and
-//     Arduino Micro only.
+// relies on these:
+//https://www.partsnotincluded.com/tutorials/how-to-emulate-an-xbox-controller-with-arduino-xinput/
+//https://github.com/dmadison/ArduinoXInput_AVR
 //
-// *** Requires this Arduino library
-// https://github.com/MHeironimus/ArduinoJoystickLibrary
 //--------------------------------------------------------------------
 
-#include <Joystick.h>
-
-Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID+1,JOYSTICK_TYPE_GAMEPAD,
-  8, 0,                  // Button Count, Hat Switch Count
-  true, true, false,     // X and Y, but no Z Axis
-  false, false, false,   // No Rx, Ry, or Rz
-  false, false,          // No rudder or throttle
-  false, false, false);  // No accelerator, brake, or steering
-
-
-  /*//pin values from keyboard version of sketch
-  int upPin = 2;
-  int downPin = 3;
-  int leftPin = 4;
-  int rightPin = 5;
-  int buttonOnePin = 6;
-  int buttonTwoPin = 7;
-  int buttonThreePin = 8;
-  int buttonFourPin = 9;
-  int buttonFivePin = 10;
-  int buttonSixPin = 11;
-  int playerSelectBitOnePin = 12;
-  int playerSelectBitTwoPin = 13;
-  */
+#include <XInput.h>
 #define pinGamepadButtonPairs_SIZE 12
 int pinGamepadButtonPairs[] =
 {
-  6, 3,
-  7, 4,
-  8, 5,
-  9, 0,
-  10, 1,
-  11, 2
+  6, 4,
+  7, 5,
+  8, 6,
+  9, 1,
+  10, 2,
+  11, 3
 };
 
 int lastQuitButtonChordState;
 #define quitButtonPinChord_LENGTH 3
 int quitButtonPinChord[] = { 9, 10, 11 };
 #define USE_QUIT_BUTTON_CHORD true
-#define QUIT_JOYSTICK_BUTTON 7
-
+#define QUIT_JOYSTICK_BUTTON 8
+#define ADC_MAX 4095
+#define JOYMIN -32768 
+#define JOYMID 0
+#define JOYMAX 32767
 
 //UP >  DOWN > LEFT > RIGHT
 #define pinJoystickDirectionPins_SIZE 4
@@ -84,14 +63,15 @@ void setup() {
     pinMode(pin, INPUT_PULLUP);
   }
 
-
-  pinMode(A0, INPUT_PULLUP);
-
   // Initialize Joystick Library
-  Joystick.begin();
-  Joystick.setXAxisRange(-1, 1);
-  Joystick.setYAxisRange(-1, 1);
-  Joystick.setButton(6,0); //set button 7 off
+  //Joystick.begin();
+  //Joystick.setXAxisRange(-1, 1);
+  //Joystick.setYAxisRange(-1, 1);
+  //Joystick.setZAxisRange(-1, 1);
+  //Joystick.setButton(6,0); //set button 7 off
+  //XInput.setJoystickRange(0, ADC_MAX);  // Set joystick range to the ADC
+  XInput.setAutoSend(false); 
+  XInput.begin();
 }
 
 
@@ -106,41 +86,64 @@ void loop() {
     int currentButtonState = !digitalRead(pin);
     if (currentButtonState != lastButtonState[i])
     {
-      Joystick.setButton(joystickButton, currentButtonState);
+      //Joystick.setButton(joystickButton, currentButtonState);
+      if (currentButtonState)
+      {    
+        XInput.press(joystickButton);
+      }
+      else
+      {
+         XInput.release(joystickButton);
+      }
       lastButtonState[i] = currentButtonState;
     }
   }
 
+int finalX = JOYMID;
+int finalY = JOYMID;
   for (int i = 0; i < pinJoystickDirectionPins_SIZE / 2; i++)
   {
-    int posPin = !digitalRead(pinJoystickDirectionPins[(2 * i) + 1]);
-    int negativePin = !digitalRead(pinJoystickDirectionPins[(2 * i)]);
+    int posPin;
+    int negativePin;
     
-    int finalAxisVal = 0;
+    
+    int finalAxisVal = JOYMID;
     
     bool isHorizontal = i == 1;
-    
+
+    if (!isHorizontal)
+    {
+       posPin = !digitalRead(pinJoystickDirectionPins[(2 * i)]);
+      negativePin = !digitalRead(pinJoystickDirectionPins[(2 * i) + 1]);
+    }
+    else
+    {
+      posPin = !digitalRead(pinJoystickDirectionPins[(2 * i) + 1]);
+      negativePin = !digitalRead(pinJoystickDirectionPins[(2 * i)]);
+    }
     if (posPin)
     {
 
-      finalAxisVal = 127;
+      finalAxisVal = JOYMAX;
 
     }
     else if (negativePin)
     {
-      finalAxisVal = -127;
+      finalAxisVal = JOYMIN;
     }
     
 
     if (isHorizontal)
     {
-      Joystick.setXAxis(finalAxisVal);
+      finalX = finalAxisVal;
+     // Joystick.setXAxis(finalAxisVal);
     }
     else
     {
-      Joystick.setYAxis(finalAxisVal);
+      finalY = finalAxisVal;
     }
   }
+  XInput.setJoystick(JOY_LEFT, finalX, finalY);
 
   //--- QUIT BUTTON SIMULATED ----
   if (USE_QUIT_BUTTON_CHORD)
@@ -154,19 +157,31 @@ void loop() {
 
     if (currentQuitButtonChordState != lastQuitButtonChordState)
     {
-      Joystick.setButton(QUIT_JOYSTICK_BUTTON, currentQuitButtonChordState);
+      if (currentQuitButtonChordState)
+      {
+        XInput.press(QUIT_JOYSTICK_BUTTON); 
+      }
+      else
+      {
+         XInput.release(QUIT_JOYSTICK_BUTTON); 
+      }
+      //Joystick.setButton(QUIT_JOYSTICK_BUTTON, currentQuitButtonChordState);
     }
 
     lastQuitButtonChordState = currentQuitButtonChordState;
   }
   //------
  ZeroUnusedAxes();
-  delay(10);
+  XInput.send();
 }
 
 void ZeroUnusedAxes()
 {
   //fishy looking, but without this line, Unity games with default input 
   //get constant spurious input
-  Joystick.setZAxis(-127);
+  //Joystick.setZAxis(0);
+  //Joystick.setRxAxis(0);
+  //Joystick.setRyAxis(0);
+  //Joystick.setHatSwitch(0, -1);
+  //Joystick.setHatSwitch(1, -1);
 }
